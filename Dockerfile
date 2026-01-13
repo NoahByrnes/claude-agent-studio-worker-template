@@ -25,8 +25,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install Claude Code CLI globally (v1.1.0+)
 RUN npm install -g @anthropic-ai/claude-code
 
-# Install Playwright system dependencies (for browser automation)
-RUN npx playwright install-deps chromium || true
+# Install Playwright with Chromium browser (for browser automation)
+RUN npx playwright@latest install-deps chromium
+RUN npx playwright@latest install chromium
 
 # Create workspace directory
 RUN mkdir -p /workspace
