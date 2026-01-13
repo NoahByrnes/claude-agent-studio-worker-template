@@ -1,4 +1,4 @@
-# E2B Base Image - Full Ubuntu 22.04 environment
+# E2B Worker Template - Base Ubuntu environment for Claude Code CLI
 FROM ubuntu:22.04
 
 # Prevent interactive prompts during installation
@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
     git \
     ca-certificates \
     gnupg \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20
@@ -27,22 +29,7 @@ RUN npm install -g @anthropic-ai/claude-code
 RUN npx playwright install-deps chromium || true
 
 # Create workspace directory
-RUN mkdir -p /workspace/agent-runtime
-
-# Copy package files
-COPY package*.json /workspace/agent-runtime/
-COPY tsconfig.json /workspace/agent-runtime/
-
-# Install dependencies (includes Claude Agent SDK for backward compatibility)
-WORKDIR /workspace/agent-runtime
-RUN npm install
-
-# Copy agent source code
-COPY src /workspace/agent-runtime/src
-COPY .claude /workspace/agent-runtime/.claude
-
-# Copy HTTP server
-COPY server.js /workspace/server.js
+RUN mkdir -p /workspace
 
 # Verify installations
 RUN node --version && npm --version && claude --version
@@ -50,8 +37,5 @@ RUN node --version && npm --version && claude --version
 # Set working directory
 WORKDIR /workspace
 
-# Expose port for HTTP server
-EXPOSE 8080
-
-# Start the HTTP server
-CMD ["node", "/workspace/server.js"]
+# Default command
+CMD ["bash"]
