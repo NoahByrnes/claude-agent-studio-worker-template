@@ -1,0 +1,3 @@
+[template]
+name = "claude-agent-studio-worker"
+runtime = "ubuntu:22.04"
