@@ -29,8 +29,22 @@ RUN npm install -g @anthropic-ai/claude-code
 RUN npx playwright@latest install-deps chromium
 RUN npx playwright@latest install chromium
 
+# Install AWS CLI for S3 storage support
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" \
+    && unzip -q /tmp/awscliv2.zip -d /tmp \
+    && /tmp/aws/install \
+    && rm -rf /tmp/awscliv2.zip /tmp/aws
+
+# Install Node.js dependencies for storage helpers
+RUN npm install -g node-fetch@2 form-data
+
 # Create workspace directory
 RUN mkdir -p /workspace
+
+# Copy persistent storage helpers
+COPY persist-result.sh /usr/local/bin/persist-result
+COPY persist-result.js /usr/local/bin/persist-result.js
+RUN chmod +x /usr/local/bin/persist-result /usr/local/bin/persist-result.js
 
 # Verify installations
 RUN node --version && npm --version && claude --version

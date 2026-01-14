@@ -11,6 +11,8 @@ Used by regular workers for general task execution.
 - Node.js 20
 - Claude Code CLI
 - Playwright with Chromium browser (for browser automation)
+- Persistent storage helpers (S3, HTTP, local)
+- AWS CLI (for S3 operations)
 - Python 3
 - Basic utilities (curl, wget, git, jq)
 
@@ -21,6 +23,8 @@ Used by infrastructure workers that can modify this repository.
 - GitHub CLI (gh) - Create PRs, manage issues
 - E2B CLI - Rebuild templates
 - Docker CLI - Analyze and modify Dockerfiles
+- Persistent storage helpers (S3, HTTP, local)
+- AWS CLI (for S3 operations)
 - Git configuration for commits
 
 ## Building Templates
@@ -64,6 +68,33 @@ async function scrapeWebsite() {
 - ~25x more cost-effective than computer use API ($0.01 vs $0.25 per task)
 - Faster execution (no screenshot processing overhead)
 - Full browser automation capabilities (form filling, clicking, navigation)
+
+## Persistent Storage
+
+Workers run in ephemeral environments, but work doesn't have to be lost. The persistent storage system provides automatic multi-tier backup:
+
+**Quick start:**
+```bash
+# Store a result file
+persist-result output.json
+
+# Store with metadata
+persist-result --name "final-report" --metadata '{"status":"complete"}' report.pdf
+```
+
+**Storage tiers:**
+1. S3 (if configured) - Production-ready, $0.023/GB/month
+2. HTTP POST (if configured) - Custom backends
+3. Local persistence - Always available as backup
+
+**Configuration:**
+```bash
+export WORKER_RESULTS_S3_BUCKET="my-results-bucket"
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+```
+
+See [PERSISTENT_STORAGE.md](./PERSISTENT_STORAGE.md) for complete documentation, examples, and best practices.
 
 ## Self-Modification
 
