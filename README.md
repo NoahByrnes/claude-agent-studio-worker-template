@@ -13,7 +13,7 @@ Used by regular workers for general task execution.
 - Playwright with Chromium browser (for browser automation)
 - Persistent storage helpers (S3, HTTP, local)
 - AWS CLI (for S3 operations)
-- Python 3
+- Python 3 with BC Ferries polling tool
 - Basic utilities (curl, wget, git, jq)
 
 ### Infrastructure Worker Template (`infrastructure.Dockerfile`)
@@ -68,6 +68,71 @@ async function scrapeWebsite() {
 - ~25x more cost-effective than computer use API ($0.01 vs $0.25 per task)
 - Faster execution (no screenshot processing overhead)
 - Full browser automation capabilities (form filling, clicking, navigation)
+
+### BC Ferries Availability Polling
+
+Workers have the `wait-for-ferry` command-line tool for polling BC Ferries availability.
+
+**Usage:**
+```bash
+# Wait for a specific sailing to become available
+wait-for-ferry \
+  --from "Departure Bay" \
+  --to "Horseshoe Bay" \
+  --date "10/15/2025" \
+  --time "1:20 pm" \
+  --adults 2 \
+  --vehicle \
+  --verbose
+
+# Walk-on passenger, check every 30 seconds
+wait-for-ferry \
+  --from tsawwassen \
+  --to swartz_bay \
+  --date "12/25/2025" \
+  --time "9:00 am" \
+  --no-vehicle \
+  --poll-interval 30
+
+# JSON output for programmatic use
+wait-for-ferry \
+  --from nanaimo \
+  --to vancouver \
+  --date "01/01/2026" \
+  --time "3:00 pm" \
+  --adults 2 \
+  --children 2 \
+  --timeout 7200 \
+  --json
+```
+
+**Exit codes:**
+- `0` - Sailing became available
+- `1` - Timeout reached (not available)
+- `2` - Invalid arguments or API error
+
+**Options:**
+- `--from`, `--to` - Terminal names (e.g., "Departure Bay", "Horseshoe Bay")
+- `--date` - Date in MM/DD/YYYY format (e.g., "10/15/2025")
+- `--time` - Departure time (e.g., "1:20 pm" or "13:20")
+- `--adults`, `--children`, `--seniors`, `--infants` - Passenger counts
+- `--vehicle` / `--no-vehicle` - Travelling with vehicle (default) or walk-on
+- `--poll-interval` - Seconds between checks (default: 10)
+- `--timeout` - Maximum wait time in seconds (default: 3600)
+- `--verbose` - Show detailed progress
+- `--json` - Output result as JSON
+
+**How it works:**
+- Polls the BC Ferries REST API (no browser automation needed)
+- Returns immediately when sailing becomes available
+- Exits with code 0 on success, 1 on timeout
+- Minimal resource usage (only HTTP requests library)
+
+**Use cases:**
+- Wait for sold-out sailings to become available
+- Monitor availability for trip planning
+- Trigger booking workflows when spots open up
+- Alert systems for ferry availability changes
 
 ## Persistent Storage
 

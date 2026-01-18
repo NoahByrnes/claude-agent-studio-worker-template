@@ -38,6 +38,9 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/aws
 # Install Node.js dependencies for storage helpers
 RUN npm install -g node-fetch@2 form-data
 
+# Install Python dependencies for wait-for-ferry tool
+RUN pip3 install --no-cache-dir requests==2.31.0
+
 # Create workspace directory
 RUN mkdir -p /workspace
 
@@ -45,6 +48,10 @@ RUN mkdir -p /workspace
 COPY persist-result.sh /usr/local/bin/persist-result
 COPY persist-result.js /usr/local/bin/persist-result.js
 RUN chmod +x /usr/local/bin/persist-result /usr/local/bin/persist-result.js
+
+# Copy BC Ferries polling tool
+COPY wait-for-ferry.py /usr/local/bin/wait-for-ferry
+RUN chmod +x /usr/local/bin/wait-for-ferry
 
 # Verify installations
 RUN node --version && npm --version && claude --version
