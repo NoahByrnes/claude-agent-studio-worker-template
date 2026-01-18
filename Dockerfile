@@ -55,8 +55,9 @@ RUN chmod +x /usr/local/bin/persist-result /usr/local/bin/persist-result.js
 # Copy BC Ferries tools
 COPY wait-for-ferry.py /usr/local/bin/wait-for-ferry
 COPY bc-ferries-book.py /usr/local/bin/bc-ferries-book
+COPY bc-ferries.py /usr/local/bin/bc-ferries
 COPY test-playwright.py /usr/local/bin/test-playwright
-RUN chmod +x /usr/local/bin/wait-for-ferry /usr/local/bin/bc-ferries-book /usr/local/bin/test-playwright
+RUN chmod +x /usr/local/bin/wait-for-ferry /usr/local/bin/bc-ferries-book /usr/local/bin/bc-ferries /usr/local/bin/test-playwright
 
 # Copy BC Ferries booking module to Python site-packages (version-agnostic)
 COPY bc_ferries_booking_modular.py /tmp/
