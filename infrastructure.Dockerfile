@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     git \
     ca-certificates \
     gnupg \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20
@@ -41,9 +42,18 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
 # Install E2B CLI
 RUN npm install -g @e2b/cli
 
-# Install Docker CLI (for Dockerfile analysis/modification)
+# Install Docker CLI and configure docker group access
 RUN apt-get update && apt-get install -y docker.io && \
     rm -rf /var/lib/apt/lists/*
+
+# Create docker group if it doesn't exist
+RUN groupadd -f docker
+
+# Configure sudo to allow docker commands without password
+# This enables infrastructure workers to run: sudo usermod -aG docker $(whoami)
+# E2B runs as 'user' by default, so we allow this user passwordless sudo for docker setup
+RUN echo "user ALL=(ALL) NOPASSWD: /usr/sbin/usermod, /usr/sbin/groupadd, /usr/sbin/groupmod, /bin/chmod /var/run/docker.sock, /usr/bin/docker" >> /etc/sudoers.d/docker-access && \
+    chmod 0440 /etc/sudoers.d/docker-access
 
 # Install AWS CLI for S3 storage support
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" \
@@ -65,6 +75,10 @@ RUN mkdir -p /workspace
 COPY persist-result.sh /usr/local/bin/persist-result
 COPY persist-result.js /usr/local/bin/persist-result.js
 RUN chmod +x /usr/local/bin/persist-result /usr/local/bin/persist-result.js
+
+# Copy Docker access initialization script
+COPY init-docker-access.sh /usr/local/bin/init-docker-access
+RUN chmod +x /usr/local/bin/init-docker-access
 
 # Verify installations
 RUN node --version && npm --version && claude --version && gh --version && e2b --version
