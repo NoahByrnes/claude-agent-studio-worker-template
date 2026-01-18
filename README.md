@@ -2,6 +2,8 @@
 
 E2B template for Claude Agent Studio workers. This repository contains the container definitions that workers run in.
 
+**📖 For workers:** See [TOOLS.md](./TOOLS.md) for comprehensive documentation on available tools and capabilities.
+
 ## Templates
 
 ### Standard Worker Template (`Dockerfile`)
@@ -10,11 +12,14 @@ Used by regular workers for general task execution.
 **Includes:**
 - Node.js 20
 - Claude Code CLI
+- **BC Ferries polling tool** (`wait-for-ferry`) - Monitor sailing availability
 - Playwright with Chromium browser (for browser automation)
 - Persistent storage helpers (S3, HTTP, local)
 - AWS CLI (for S3 operations)
 - Python 3
 - Basic utilities (curl, wget, git, jq)
+
+**🔧 See [TOOLS.md](./TOOLS.md) for complete tool documentation and usage examples.**
 
 ### Infrastructure Worker Template (`infrastructure.Dockerfile`)
 Used by infrastructure workers that can modify this repository.
@@ -46,28 +51,42 @@ Workers are automatically spawned by Stu (the conductor) using these templates. 
 - `E2B_TEMPLATE_ID` - Standard worker template
 - `E2B_INFRASTRUCTURE_TEMPLATE_ID` - Infrastructure worker template
 
-### Browser Automation with Playwright
+### Worker Tools and Capabilities
 
-Workers have Playwright with Chromium installed for browser automation tasks. This enables cost-effective browser interactions without the computer use API.
+Workers have access to specialized tools for domain-specific tasks. For detailed documentation on all available tools, see [TOOLS.md](./TOOLS.md).
 
-**Example usage:**
-```javascript
-const { chromium } = require('playwright');
+#### BC Ferries Availability Polling
 
-async function scrapeWebsite() {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto('https://example.com');
-  const content = await page.content();
-  await browser.close();
-  return content;
-}
+Monitor BC Ferries sailing availability using the `wait-for-ferry` command:
+
+```bash
+wait-for-ferry \
+  --from "Departure Bay" \
+  --to "Horseshoe Bay" \
+  --date "10/15/2025" \
+  --time "1:20 pm" \
+  --adults 2 \
+  --vehicle
 ```
 
-**Benefits:**
-- ~25x more cost-effective than computer use API ($0.01 vs $0.25 per task)
-- Faster execution (no screenshot processing overhead)
-- Full browser automation capabilities (form filling, clicking, navigation)
+**Key features:**
+- Polls BC Ferries REST API for real-time availability
+- Waits until sailing becomes available or timeout is reached
+- Exit code 0 on success, 1 on timeout
+- 25x more cost-effective than browser automation ($0.01 vs $0.25 per task)
+- Supports all routes, passenger configurations, and vehicle options
+
+See [TOOLS.md](./TOOLS.md#bc-ferries-availability-polling) for complete usage guide.
+
+#### Browser Automation with Playwright
+
+For tasks requiring actual browser interaction, workers have Playwright with Chromium installed.
+
+**When to use:**
+- Use `wait-for-ferry` for BC Ferries availability checking
+- Use Playwright only when APIs are not available or insufficient
+
+See [TOOLS.md](./TOOLS.md#browser-automation-with-playwright) for Playwright usage guide.
 
 ## Persistent Storage
 
