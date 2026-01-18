@@ -69,9 +69,13 @@ async function scrapeWebsite() {
 - Faster execution (no screenshot processing overhead)
 - Full browser automation capabilities (form filling, clicking, navigation)
 
-### BC Ferries Availability Polling
+### BC Ferries Tools
 
-Workers have the `wait-for-ferry` command-line tool for polling BC Ferries availability.
+Workers have comprehensive BC Ferries tools for monitoring and booking.
+
+#### 1. Availability Polling (`wait-for-ferry`)
+
+Poll BC Ferries API for sailing availability.
 
 **Usage:**
 ```bash
@@ -133,6 +137,81 @@ wait-for-ferry \
 - Monitor availability for trip planning
 - Trigger booking workflows when spots open up
 - Alert systems for ferry availability changes
+
+#### 2. Auto-Booking (`bc-ferries-book`)
+
+Automated browser-based booking using Playwright. Completes entire booking flow from login to payment.
+
+**Usage:**
+```bash
+# Book a ferry sailing (dry run by default - no payment)
+bc-ferries-book
+
+# With environment variables:
+export DEPARTURE="Departure Bay"
+export ARRIVAL="Horseshoe Bay"
+export DATE="2026-01-24"
+export SAILING_TIME="1:10 pm"
+export ADULTS="2"
+export VEHICLE_HEIGHT="under_7ft"
+export VEHICLE_LENGTH="under_20ft"
+export BC_FERRIES_EMAIL="user@example.com"
+export BC_FERRIES_PASSWORD="password"
+export CC_NAME="John Doe"
+export CC_NUMBER="4111111111111111"
+export CC_EXPIRY="12/26"
+export CC_CVV="123"
+export CC_ADDRESS="123 Main St"
+export CC_CITY="Vancouver"
+export CC_PROVINCE="British Columbia"
+export CC_POSTAL="V6B 1A1"
+export DRY_RUN="true"  # Set to "false" to actually submit payment
+
+bc-ferries-book
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "confirmationNumber": "BC12345",
+  "failedStep": null,
+  "error": null
+}
+```
+
+**Exit codes:**
+- `0` - Booking succeeded
+- `1` - Booking failed (check JSON output for details)
+
+**Steps automated:**
+1. Login to BC Ferries account
+2. Navigate to booking flow
+3. Select departure/arrival terminals
+4. Select travel date
+5. Add passengers
+6. Select vehicle dimensions
+7. Find and select specific sailing time
+8. Select fare type (reservation only)
+9. Proceed to checkout
+10. Fill payment form
+11. Submit payment (if `DRY_RUN=false`)
+
+**Security:**
+- Credentials passed via environment variables (encrypted in E2B)
+- Screenshots saved on errors for debugging
+- Dry run mode by default (prevents accidental charges)
+
+#### 3. Playwright Test (`test-playwright`)
+
+Verify Playwright Python bindings are working correctly.
+
+**Usage:**
+```bash
+test-playwright
+```
+
+This will test browser launch, navigation, and screenshot capabilities.
 
 ## Persistent Storage
 
