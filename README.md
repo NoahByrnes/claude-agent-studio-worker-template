@@ -73,6 +73,60 @@ async function scrapeWebsite() {
 
 Workers have comprehensive BC Ferries tools for monitoring and booking.
 
+#### Ferry Monitor Background Service
+
+The ferry monitor can run as a **background service** while the worker performs other tasks. This allows long-running monitoring without blocking worker operations.
+
+**Quick Start:**
+```bash
+# Configure monitoring
+ferry-monitor-daemon config
+
+# Start monitoring in background
+ferry-monitor-daemon start
+
+# Worker can now do other work while monitor runs in background!
+
+# Check status
+ferry-monitor-daemon status
+
+# View logs
+ferry-monitor-daemon logs
+
+# Stop monitoring
+ferry-monitor-daemon stop
+```
+
+**Commands:**
+- `ferry-monitor-daemon config` - Interactive configuration setup
+- `ferry-monitor-daemon start` - Start background monitoring
+- `ferry-monitor-daemon stop` - Stop background monitoring
+- `ferry-monitor-daemon restart` - Restart the monitor
+- `ferry-monitor-daemon status` - Check if monitor is running
+- `ferry-monitor-daemon logs [lines]` - View recent log entries
+
+**Configuration Options:**
+- Departure/arrival terminals
+- Date and time to monitor
+- Passenger counts (adults, children)
+- Vehicle vs walk-on
+- Poll interval (seconds between checks)
+- Timeout (max monitoring duration)
+- Continuous monitoring (keep checking after availability found)
+
+**Use Cases:**
+- Monitor ferry while worker does other tasks
+- Long-running availability checks (hours/days)
+- Continuous monitoring for trip planning
+- Trigger booking workflows when spots open
+
+**How It Works:**
+- Runs as a background process (daemon)
+- Logs all activity to `/tmp/ferry-monitor/monitor.log`
+- Configuration stored in `/tmp/ferry-monitor/config.json`
+- Process ID tracked in `/tmp/ferry-monitor/monitor.pid`
+- Minimal resource usage (only HTTP polling)
+
 #### 1. Availability Polling (`wait-for-ferry`)
 
 Poll BC Ferries API for sailing availability.
@@ -137,6 +191,8 @@ wait-for-ferry \
 - Monitor availability for trip planning
 - Trigger booking workflows when spots open up
 - Alert systems for ferry availability changes
+
+**Note:** For long-running monitoring while doing other work, use `ferry-monitor-daemon` instead. It runs the monitor as a background service.
 
 #### 2. Auto-Booking (`bc-ferries-book`)
 
