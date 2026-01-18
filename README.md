@@ -202,7 +202,131 @@ bc-ferries-book
 - Screenshots saved on errors for debugging
 - Dry run mode by default (prevents accidental charges)
 
-#### 3. Playwright Test (`test-playwright`)
+#### 3. Watch and Book Daemon (`bc-ferries-watch-and-book`)
+
+**NEW: Background daemon that combines monitoring + auto-booking in one command.**
+
+The daemon runs in the background, continuously monitors for availability, and automatically triggers booking when a sailing becomes available. Perfect for workers that need to launch long-running tasks and move on to other work.
+
+**Features:**
+- Runs as background daemon (non-blocking)
+- Monitors API every 10 seconds for availability
+- Automatically books when sailing becomes available
+- Process management (start/stop/status)
+- Writes results to `/tmp/ferry-booking-result.json`
+- Comprehensive logging to `/tmp/ferry-watch-and-book.log`
+
+**Usage:**
+
+```bash
+# Set booking credentials (required)
+export BC_FERRIES_EMAIL="user@example.com"
+export BC_FERRIES_PASSWORD="password"
+export CC_NAME="John Doe"
+export CC_NUMBER="4111111111111111"
+export CC_EXPIRY="12/26"
+export CC_CVV="123"
+export CC_ADDRESS="123 Main St"
+export CC_CITY="Vancouver"
+export CC_PROVINCE="British Columbia"
+export CC_POSTAL="V6B 1A1"
+export VEHICLE_HEIGHT="under_7ft"
+export VEHICLE_LENGTH="under_20ft"
+export DRY_RUN="true"  # Set to "false" for real booking
+
+# Start daemon (non-blocking - returns immediately)
+bc-ferries-watch-and-book start \
+  --from "Departure Bay" \
+  --to "Horseshoe Bay" \
+  --date "01/24/2026" \
+  --time "1:10 pm" \
+  --adults 2 \
+  --vehicle \
+  --daemon
+
+# Worker can now continue other tasks...
+# Daemon runs in background monitoring for availability
+
+# Check status
+bc-ferries-watch-and-book status
+
+# View logs
+bc-ferries-watch-and-book logs
+
+# Stop daemon
+bc-ferries-watch-and-book stop
+
+# Read final result
+cat /tmp/ferry-booking-result.json
+```
+
+**Status output:**
+```json
+{
+  "status": "monitoring",
+  "timestamp": "2026-01-18T20:45:00",
+  "pid": 1234,
+  "from": "Departure Bay",
+  "to": "Horseshoe Bay",
+  "date": "01/24/2026",
+  "time": "1:10 pm",
+  "poll_interval": 10
+}
+```
+
+**Result output (after completion):**
+```json
+{
+  "success": true,
+  "timestamp": "2026-01-18T21:00:00",
+  "phase": "completed",
+  "confirmationNumber": "BC12345",
+  "booking_details": {
+    "success": true,
+    "confirmationNumber": "BC12345",
+    "failedStep": null,
+    "error": null
+  }
+}
+```
+
+**Commands:**
+- `start` - Start monitoring daemon (non-blocking)
+- `status` - Check daemon status and progress
+- `logs` - View daemon logs
+- `stop` - Stop running daemon
+
+**Options:**
+- `--from`, `--to` - Terminal names
+- `--date` - Date in MM/DD/YYYY format
+- `--time` - Sailing time (e.g., "1:10 pm")
+- `--adults`, `--children`, `--seniors`, `--infants` - Passenger counts
+- `--vehicle` / `--no-vehicle` - Vehicle or walk-on
+- `--poll-interval` - Seconds between checks (default: 10)
+- `--timeout` - Max monitoring time in seconds (default: 3600)
+- `--daemon` / `--no-daemon` - Background mode (default: daemon)
+
+**How it works:**
+1. Daemon starts in background (returns immediately)
+2. Calls `wait-for-ferry` to monitor API every 10s
+3. When sailing becomes available, calls `bc-ferries-book` automatically
+4. Writes result to `/tmp/ferry-booking-result.json`
+5. Worker can check status/logs/result at any time
+6. Daemon exits after booking completes (success or failure)
+
+**Use cases:**
+- Long-running ferry monitoring without blocking worker
+- Auto-book sold-out sailings when they become available
+- Launch multiple monitoring tasks in parallel
+- Worker continues other tasks while daemon monitors
+
+**Process files:**
+- `/tmp/ferry-watch-and-book.pid` - Process ID
+- `/tmp/ferry-watch-and-book-status.json` - Current status
+- `/tmp/ferry-booking-result.json` - Final booking result
+- `/tmp/ferry-watch-and-book.log` - Detailed logs
+
+#### 4. Playwright Test (`test-playwright`)
 
 Verify Playwright Python bindings are working correctly.
 
