@@ -38,22 +38,8 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/aws
 # Install Node.js dependencies for storage helpers
 RUN npm install -g node-fetch@2 form-data
 
-# Install bc-ferries-monitor Python dependencies
-RUN pip3 install --no-cache-dir \
-    fastapi==0.104.1 \
-    uvicorn[standard]==0.24.0 \
-    pydantic[email]==2.5.0 \
-    sqlalchemy==2.0.23 \
-    psycopg2-binary==2.9.9 \
-    alembic==1.13.0 \
-    requests==2.31.0 \
-    playwright==1.40.0 \
-    python-dotenv==1.0.0 \
-    python-multipart==0.0.6 \
-    cryptography==41.0.7
-
-# Install Playwright Python bindings for bc-ferries-monitor
-RUN python3 -m playwright install chromium
+# Install Python dependencies for wait-for-ferry tool
+RUN pip3 install --no-cache-dir requests==2.31.0
 
 # Create workspace directory
 RUN mkdir -p /workspace
@@ -62,6 +48,10 @@ RUN mkdir -p /workspace
 COPY persist-result.sh /usr/local/bin/persist-result
 COPY persist-result.js /usr/local/bin/persist-result.js
 RUN chmod +x /usr/local/bin/persist-result /usr/local/bin/persist-result.js
+
+# Copy BC Ferries polling tool
+COPY wait-for-ferry.py /usr/local/bin/wait-for-ferry
+RUN chmod +x /usr/local/bin/wait-for-ferry
 
 # Verify installations
 RUN node --version && npm --version && claude --version
