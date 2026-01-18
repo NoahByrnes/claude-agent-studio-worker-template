@@ -26,10 +26,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 RUN npm install -g @anthropic-ai/claude-code
 
 # Install Playwright system dependencies for Chromium
-RUN npx playwright@latest install-deps chromium
+RUN npx playwright@1.40.0 install-deps chromium
 
-# Install Playwright for both Node.js and Python
-RUN npx playwright@latest install chromium
+# Install Playwright for both Node.js and Python (pinned to same version to share Chromium)
+RUN npx playwright@1.40.0 install chromium
 RUN pip3 install --no-cache-dir playwright==1.40.0 python-dateutil==2.8.2 requests==2.31.0
 RUN python3 -m playwright install chromium
 
@@ -54,10 +54,15 @@ RUN chmod +x /usr/local/bin/persist-result /usr/local/bin/persist-result.js
 
 # Copy BC Ferries tools
 COPY wait-for-ferry.py /usr/local/bin/wait-for-ferry
-COPY bc_ferries_booking_modular.py /usr/local/lib/python3.10/dist-packages/
 COPY bc-ferries-book.py /usr/local/bin/bc-ferries-book
 COPY test-playwright.py /usr/local/bin/test-playwright
 RUN chmod +x /usr/local/bin/wait-for-ferry /usr/local/bin/bc-ferries-book /usr/local/bin/test-playwright
+
+# Copy BC Ferries booking module to Python site-packages (version-agnostic)
+COPY bc_ferries_booking_modular.py /tmp/
+RUN PYTHON_SITE=$(python3 -c "import site; print(site.getsitepackages()[0])") && \
+    cp /tmp/bc_ferries_booking_modular.py ${PYTHON_SITE}/ && \
+    rm /tmp/bc_ferries_booking_modular.py
 
 # Verify installations
 RUN node --version && npm --version && claude --version

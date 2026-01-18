@@ -3,6 +3,8 @@
 BC Ferries Auto-Booking Script
 Runs in E2B worker when ferry becomes available
 
+Version: 1.0.0
+
 Environment variables required:
 - DEPARTURE: Departure terminal (e.g., "Departure Bay")
 - ARRIVAL: Arrival terminal (e.g., "Horseshoe Bay")
@@ -32,7 +34,23 @@ import json
 from playwright.sync_api import sync_playwright
 from bc_ferries_booking_modular import BCFerriesBooking
 
+VERSION = "1.0.0"
+
 def main():
+    # Handle --version flag
+    if len(sys.argv) > 1 and sys.argv[1] in ('--version', '-v'):
+        print(f"bc-ferries-book version {VERSION}")
+        print("Playwright:", end=" ")
+        try:
+            import playwright
+            print(playwright.__version__)
+        except:
+            print("not found")
+        return {"success": True}
+
+    if len(sys.argv) > 1 and sys.argv[1] in ('--help', '-h'):
+        print(__doc__)
+        return {"success": True}
     # Get parameters from environment
     departure = os.environ.get('DEPARTURE')
     arrival = os.environ.get('ARRIVAL')
@@ -77,8 +95,8 @@ def main():
         "postal_code": os.environ.get('CC_POSTAL', ''),
     }
 
-    # Check if dry run mode
-    dry_run = os.environ.get('DRY_RUN', 'true').lower() == 'true'
+    # Check if dry run mode (flexible boolean parsing)
+    dry_run = os.environ.get('DRY_RUN', 'true').lower() in ('true', '1', 'yes', 't', 'y')
 
     print(f"🚢 BC Ferries Auto-Booking")
     print(f"   Route: {departure} → {arrival}")
@@ -90,7 +108,7 @@ def main():
 
     with sync_playwright() as p:
         # Launch browser (headless in production)
-        headless = os.environ.get('HEADLESS', 'true').lower() == 'true'
+        headless = os.environ.get('HEADLESS', 'true').lower() in ('true', '1', 'yes', 't', 'y')
         browser = p.chromium.launch(headless=headless)
         page = browser.new_page()
         booking = BCFerriesBooking(page)
