@@ -13,7 +13,7 @@ Used by regular workers for general task execution.
 - Playwright with Chromium browser (for browser automation)
 - Persistent storage helpers (S3, HTTP, local)
 - AWS CLI (for S3 operations)
-- Python 3
+- Python 3 with bc-ferries-monitor dependencies
 - Basic utilities (curl, wget, git, jq)
 
 ### Infrastructure Worker Template (`infrastructure.Dockerfile`)
@@ -68,6 +68,55 @@ async function scrapeWebsite() {
 - ~25x more cost-effective than computer use API ($0.01 vs $0.25 per task)
 - Faster execution (no screenshot processing overhead)
 - Full browser automation capabilities (form filling, clicking, navigation)
+
+### BC Ferries Monitoring and Scraping
+
+Workers have integrated bc-ferries-monitor Python project for automated BC Ferries availability checking and booking.
+
+**Capabilities:**
+- Multi-route ferry availability scraping (any BC Ferries route)
+- Multi-day availability checks for consecutive days
+- Passenger configuration (adults, children, infants, seniors)
+- Vehicle support (standard and oversized)
+- Real-time monitoring mode with refresh tracking
+- JSON and CSV output formats
+- Headless browser operation
+
+**Example usage in Python:**
+```python
+import subprocess
+import json
+
+# Check ferry availability
+result = subprocess.run([
+    'python3', 'bc_ferries_scraper.py',
+    '--from', 'Departure Bay',
+    '--to', 'Horseshoe Bay',
+    '--date', '2025-10-20',
+    '--adults', '2',
+    '--output', 'json',
+    '--headless'
+], capture_output=True, text=True)
+
+# Parse results
+availability = json.loads(result.stdout)
+```
+
+**Available Python dependencies:**
+- FastAPI 0.104.1 (REST API framework)
+- Playwright 1.40.0 (browser automation)
+- SQLAlchemy 2.0.23 (database ORM)
+- Requests 2.31.0 (HTTP client)
+- Pydantic 2.5.0 (data validation)
+- PostgreSQL support (psycopg2-binary)
+- And more (see requirements.txt)
+
+**Use cases:**
+- Ferry availability tracking for trip planning
+- Price monitoring across dates
+- Real-time availability alerts for sold-out sailings
+- Automated booking workflow integration
+- Data collection for ferry schedules and pricing patterns
 
 ## Persistent Storage
 
