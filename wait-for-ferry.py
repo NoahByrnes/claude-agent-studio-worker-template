@@ -177,7 +177,7 @@ def wait_for_availability(
     seniors: int = 0,
     infants: int = 0,
     vehicle: bool = True,
-    poll_interval: int = 60,
+    poll_interval: int = 10,
     timeout: int = 3600,
     verbose: bool = False
 ) -> Dict:
@@ -321,8 +321,8 @@ Exit codes:
     parser.add_argument("--no-vehicle", dest="vehicle", action="store_false",
                         help="Walk-on passenger (no vehicle)")
 
-    parser.add_argument("--poll-interval", type=int, default=60,
-                        help="Seconds between API checks [default: 60]")
+    parser.add_argument("--poll-interval", type=int, default=10,
+                        help="Seconds between API checks [default: 10]")
     parser.add_argument("--timeout", type=int, default=3600,
                         help="Maximum wait time in seconds [default: 3600 (1 hour)]")
 

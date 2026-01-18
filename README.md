@@ -117,7 +117,7 @@ wait-for-ferry \
 - `--time` - Departure time (e.g., "1:20 pm" or "13:20")
 - `--adults`, `--children`, `--seniors`, `--infants` - Passenger counts
 - `--vehicle` / `--no-vehicle` - Travelling with vehicle (default) or walk-on
-- `--poll-interval` - Seconds between checks (default: 60)
+- `--poll-interval` - Seconds between checks (default: 10)
 - `--timeout` - Maximum wait time in seconds (default: 3600)
 - `--verbose` - Show detailed progress
 - `--json` - Output result as JSON
