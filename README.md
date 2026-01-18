@@ -73,6 +73,57 @@ async function scrapeWebsite() {
 
 Workers have comprehensive BC Ferries tools for monitoring and booking.
 
+#### Unified Tool: `bc-ferries` (Recommended)
+
+The `bc-ferries` command provides a unified interface for all ferry operations.
+
+**Commands:**
+- `bc-ferries monitor` - Wait for sailing availability (API-based)
+- `bc-ferries book` - Automated booking (browser-based)
+- `bc-ferries monitor-and-book` - Hybrid workflow: monitor → auto-book
+
+**Quick Examples:**
+
+```bash
+# Monitor until a sailing becomes available
+bc-ferries monitor \
+  --from "Departure Bay" \
+  --to "Horseshoe Bay" \
+  --date "10/15/2025" \
+  --time "1:20 pm" \
+  --adults 2 \
+  --vehicle
+
+# Auto-book a ferry (requires credentials as env vars)
+export BC_FERRIES_EMAIL="user@example.com"
+export BC_FERRIES_PASSWORD="password"
+export DEPARTURE="Departure Bay"
+export ARRIVAL="Horseshoe Bay"
+export DATE="2026-01-24"
+export SAILING_TIME="1:10 pm"
+# ... (set payment details)
+bc-ferries book
+
+# Hybrid: Wait for availability, then auto-book immediately
+bc-ferries monitor-and-book \
+  --from "Departure Bay" \
+  --to "Horseshoe Bay" \
+  --date "10/15/2025" \
+  --time "1:20 pm" \
+  --adults 2 \
+  --vehicle
+```
+
+**Why use the unified tool?**
+- Single interface for all operations
+- Hybrid workflows (monitor → book)
+- Consistent CLI arguments across commands
+- Easier to compose multi-step workflows
+
+---
+
+#### Individual Tools (Advanced)
+
 #### 1. Availability Polling (`wait-for-ferry`)
 
 Poll BC Ferries API for sailing availability.
