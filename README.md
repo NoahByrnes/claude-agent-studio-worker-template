@@ -75,18 +75,24 @@ Workers have comprehensive BC Ferries tools for monitoring and booking.
 
 #### Unified Tool: `bc-ferries` (Recommended)
 
-The `bc-ferries` command provides a unified interface for all ferry operations.
+The `bc-ferries` command provides a unified interface for all ferry operations with **background daemon support**.
 
 **Commands:**
 - `bc-ferries monitor` - Wait for sailing availability (API-based)
 - `bc-ferries book` - Automated booking (browser-based)
 - `bc-ferries monitor-and-book` - Hybrid workflow: monitor → auto-book
+  - `--daemon` flag - Run in background (non-blocking)
+- `bc-ferries status` - Check daemon status
+- `bc-ferries logs` - View daemon logs
+- `bc-ferries stop` - Stop background daemon
 
-**Quick Examples:**
+**Background Daemon Mode (Key Feature!):**
+
+The daemon runs **independently** in the background, allowing workers to continue other tasks:
 
 ```bash
-# Monitor until a sailing becomes available
-bc-ferries monitor \
+# Launch daemon (returns immediately, non-blocking)
+bc-ferries monitor-and-book --daemon \
   --from "Departure Bay" \
   --to "Horseshoe Bay" \
   --date "10/15/2025" \
@@ -94,17 +100,34 @@ bc-ferries monitor \
   --adults 2 \
   --vehicle
 
-# Auto-book a ferry (requires credentials as env vars)
-export BC_FERRIES_EMAIL="user@example.com"
-export BC_FERRIES_PASSWORD="password"
-export DEPARTURE="Departure Bay"
-export ARRIVAL="Horseshoe Bay"
-export DATE="2026-01-24"
-export SAILING_TIME="1:10 pm"
-# ... (set payment details)
-bc-ferries book
+# Worker continues doing other work while daemon monitors...
 
-# Hybrid: Wait for availability, then auto-book immediately
+# Check daemon status anytime
+bc-ferries status
+
+# View daemon logs (last 50 lines)
+bc-ferries logs
+
+# Follow logs in real-time
+bc-ferries logs --follow
+
+# Stop daemon
+bc-ferries stop
+
+# Results written to: /tmp/ferry-booking-result.json
+```
+
+**State Files:**
+- `/tmp/bc-ferries.pid` - Daemon process ID
+- `/tmp/bc-ferries-state.json` - Current daemon state
+- `/tmp/bc-ferries.log` - Daemon output logs
+- `/tmp/ferry-booking-result.json` - Final booking result
+
+**Foreground Mode:**
+
+Run synchronously (blocks until complete):
+
+```bash
 bc-ferries monitor-and-book \
   --from "Departure Bay" \
   --to "Horseshoe Bay" \
@@ -115,10 +138,12 @@ bc-ferries monitor-and-book \
 ```
 
 **Why use the unified tool?**
+- **Background daemon** - Launch and forget, check status later
+- **Non-blocking** - Worker can do other tasks while monitoring
 - Single interface for all operations
 - Hybrid workflows (monitor → book)
 - Consistent CLI arguments across commands
-- Easier to compose multi-step workflows
+- State persistence and recovery
 
 ---
 
