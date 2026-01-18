@@ -75,11 +75,11 @@ Workers have comprehensive BC Ferries tools for monitoring and booking.
 
 #### Ferry Monitor Background Service
 
-The ferry monitor can run as a **background service** while the worker performs other tasks. This allows long-running monitoring without blocking worker operations.
+The ferry monitor can run as a **background service** while the worker performs other tasks. This enables long-running monitoring without blocking worker operations, and can **automatically book** when availability is detected.
 
 **Quick Start:**
 ```bash
-# Configure monitoring
+# Configure monitoring (with optional auto-booking)
 ferry-monitor-daemon config
 
 # Start monitoring in background
@@ -92,6 +92,9 @@ ferry-monitor-daemon status
 
 # View logs
 ferry-monitor-daemon logs
+
+# Check booking results (if auto-booking enabled)
+cat /tmp/ferry-monitor/booking-result.json
 
 # Stop monitoring
 ferry-monitor-daemon stop
@@ -115,17 +118,36 @@ ferry-monitor-daemon stop
 - Continuous monitoring (keep checking after availability found)
 
 **Use Cases:**
+- **Watch-and-book workflow** - Automatically book sold-out sailings when spots open
 - Monitor ferry while worker does other tasks
 - Long-running availability checks (hours/days)
 - Continuous monitoring for trip planning
-- Trigger booking workflows when spots open
+- Hands-free booking without manual intervention
 
 **How It Works:**
 - Runs as a background process (daemon)
+- Polls BC Ferries API for availability
+- **Automatically triggers bc-ferries-book** when sailing becomes available (if enabled)
 - Logs all activity to `/tmp/ferry-monitor/monitor.log`
+- Booking results saved to `/tmp/ferry-monitor/booking-result.json`
 - Configuration stored in `/tmp/ferry-monitor/config.json`
 - Process ID tracked in `/tmp/ferry-monitor/monitor.pid`
-- Minimal resource usage (only HTTP polling)
+- Minimal resource usage (HTTP polling + browser automation only when needed)
+
+**Auto-Booking:**
+When enabled during configuration, the daemon will:
+1. Monitor for availability (HTTP polling)
+2. Detect when sailing becomes available
+3. Automatically launch `bc-ferries-book` with configured credentials
+4. Complete entire booking workflow (login → selection → payment)
+5. Save booking confirmation to `booking-result.json`
+6. Continue monitoring (if continuous mode enabled)
+
+**Security:**
+- Credentials stored in config file (ephemeral E2B storage)
+- Supports dry-run mode (default) to test without payment
+- Password masking during configuration
+- Sensitive fields excluded from status output
 
 #### 1. Availability Polling (`wait-for-ferry`)
 
