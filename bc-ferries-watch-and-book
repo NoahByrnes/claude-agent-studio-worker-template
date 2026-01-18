@@ -1,0 +1,468 @@
+#!/usr/bin/env python3
+"""
+BC Ferries Watch and Book - Background daemon for monitoring + auto-booking
+
+Combines wait-for-ferry monitoring with bc-ferries-book automation.
+Runs as background daemon, writes results to file when complete.
+
+Usage:
+    bc-ferries-watch-and-book start [options]  # Start monitoring daemon
+    bc-ferries-watch-and-book status           # Check daemon status
+    bc-ferries-watch-and-book stop             # Stop daemon
+    bc-ferries-watch-and-book logs             # Show daemon logs
+"""
+
+import sys
+import os
+import json
+import time
+import signal
+import subprocess
+import argparse
+from pathlib import Path
+from datetime import datetime
+
+# Constants
+PID_FILE = "/tmp/ferry-watch-and-book.pid"
+STATUS_FILE = "/tmp/ferry-watch-and-book-status.json"
+RESULT_FILE = "/tmp/ferry-booking-result.json"
+LOG_FILE = "/tmp/ferry-watch-and-book.log"
+
+def log(message):
+    """Write timestamped message to log file"""
+    timestamp = datetime.now().isoformat()
+    with open(LOG_FILE, 'a') as f:
+        f.write(f"[{timestamp}] {message}\n")
+    if os.environ.get('VERBOSE') == 'true':
+        print(f"[{timestamp}] {message}", file=sys.stderr)
+
+def update_status(status, details=None):
+    """Update status file with current state"""
+    status_data = {
+        "status": status,
+        "timestamp": datetime.now().isoformat(),
+        "pid": os.getpid()
+    }
+    if details:
+        status_data.update(details)
+
+    with open(STATUS_FILE, 'w') as f:
+        json.dump(status_data, f, indent=2)
+
+    log(f"Status updated: {status}")
+
+def write_result(success, data):
+    """Write final booking result to file"""
+    result = {
+        "success": success,
+        "timestamp": datetime.now().isoformat(),
+        **data
+    }
+    with open(RESULT_FILE, 'w') as f:
+        json.dump(result, f, indent=2)
+    log(f"Result written: success={success}")
+
+def is_running():
+    """Check if daemon is currently running"""
+    if not os.path.exists(PID_FILE):
+        return False
+
+    try:
+        with open(PID_FILE, 'r') as f:
+            pid = int(f.read().strip())
+
+        # Check if process exists
+        os.kill(pid, 0)
+        return True
+    except (OSError, ValueError):
+        # PID file exists but process is dead - clean up
+        os.remove(PID_FILE)
+        return False
+
+def stop_daemon():
+    """Stop running daemon"""
+    if not is_running():
+        print("Daemon is not running")
+        return 1
+
+    with open(PID_FILE, 'r') as f:
+        pid = int(f.read().strip())
+
+    try:
+        print(f"Stopping daemon (PID {pid})...")
+        os.kill(pid, signal.SIGTERM)
+
+        # Wait for process to terminate
+        for _ in range(10):
+            try:
+                os.kill(pid, 0)
+                time.sleep(0.5)
+            except OSError:
+                break
+
+        # Clean up PID file
+        if os.path.exists(PID_FILE):
+            os.remove(PID_FILE)
+
+        update_status("stopped", {"reason": "user_requested"})
+        print("Daemon stopped successfully")
+        return 0
+
+    except OSError as e:
+        print(f"Failed to stop daemon: {e}")
+        return 1
+
+def show_status():
+    """Display daemon status"""
+    if not is_running():
+        print("Status: NOT RUNNING")
+
+        # Show last known status if available
+        if os.path.exists(STATUS_FILE):
+            with open(STATUS_FILE, 'r') as f:
+                last_status = json.load(f)
+            print(f"\nLast known state:")
+            print(json.dumps(last_status, indent=2))
+
+        return 1
+
+    print("Status: RUNNING")
+
+    if os.path.exists(STATUS_FILE):
+        with open(STATUS_FILE, 'r') as f:
+            status = json.load(f)
+        print("\nCurrent state:")
+        print(json.dumps(status, indent=2))
+
+    if os.path.exists(RESULT_FILE):
+        with open(RESULT_FILE, 'r') as f:
+            result = json.load(f)
+        print("\nBooking result:")
+        print(json.dumps(result, indent=2))
+
+    return 0
+
+def show_logs():
+    """Display daemon logs"""
+    if not os.path.exists(LOG_FILE):
+        print("No logs available")
+        return 1
+
+    with open(LOG_FILE, 'r') as f:
+        print(f.read())
+    return 0
+
+def run_daemon(args):
+    """Main daemon logic - monitor then book"""
+
+    # Detach from parent process if daemonizing
+    if args.daemon:
+        # Double fork to fully daemonize
+        if os.fork() > 0:
+            sys.exit(0)
+
+        os.setsid()
+
+        if os.fork() > 0:
+            sys.exit(0)
+
+        # Redirect stdout/stderr to log file
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+        with open(LOG_FILE, 'a') as log_f:
+            os.dup2(log_f.fileno(), sys.stdout.fileno())
+            os.dup2(log_f.fileno(), sys.stderr.fileno())
+
+    # Write PID file
+    with open(PID_FILE, 'w') as f:
+        f.write(str(os.getpid()))
+
+    log("=" * 60)
+    log("BC Ferries Watch and Book daemon started")
+    log(f"PID: {os.getpid()}")
+    log(f"Monitoring: {args.from_terminal} → {args.to_terminal}")
+    log(f"Date: {args.date}, Time: {args.time}")
+    log(f"Passengers: {args.adults} adults")
+    log(f"Vehicle: {args.vehicle}")
+    log("=" * 60)
+
+    try:
+        # Phase 1: Monitor for availability
+        update_status("monitoring", {
+            "from": args.from_terminal,
+            "to": args.to_terminal,
+            "date": args.date,
+            "time": args.time,
+            "poll_interval": args.poll_interval
+        })
+
+        # Build wait-for-ferry command
+        monitor_cmd = [
+            "wait-for-ferry",
+            "--from", args.from_terminal,
+            "--to", args.to_terminal,
+            "--date", args.date,
+            "--time", args.time,
+            "--adults", str(args.adults),
+            "--poll-interval", str(args.poll_interval),
+            "--timeout", str(args.timeout),
+            "--json"
+        ]
+
+        if args.children:
+            monitor_cmd.extend(["--children", str(args.children)])
+        if args.seniors:
+            monitor_cmd.extend(["--seniors", str(args.seniors)])
+        if args.infants:
+            monitor_cmd.extend(["--infants", str(args.infants)])
+
+        if args.vehicle:
+            monitor_cmd.append("--vehicle")
+        else:
+            monitor_cmd.append("--no-vehicle")
+
+        log(f"Starting monitoring: {' '.join(monitor_cmd)}")
+
+        # Run monitoring (blocks until available or timeout)
+        result = subprocess.run(monitor_cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            # Monitoring failed or timed out
+            log(f"Monitoring failed with code {result.returncode}")
+            log(f"Output: {result.stdout}")
+            log(f"Errors: {result.stderr}")
+
+            update_status("failed", {
+                "phase": "monitoring",
+                "exit_code": result.returncode
+            })
+
+            write_result(False, {
+                "phase": "monitoring",
+                "error": "Sailing did not become available within timeout period",
+                "exit_code": result.returncode,
+                "output": result.stdout
+            })
+
+            cleanup_and_exit(1)
+
+        # Sailing is available!
+        log("Sailing became available! Starting booking process...")
+
+        try:
+            monitor_output = json.loads(result.stdout)
+            log(f"Monitor result: {json.dumps(monitor_output)}")
+        except json.JSONDecodeError:
+            log(f"Monitor output (non-JSON): {result.stdout}")
+
+        # Phase 2: Book the sailing
+        update_status("booking", {
+            "sailing_available": True,
+            "booking_started": datetime.now().isoformat()
+        })
+
+        # Build booking command (uses environment variables)
+        book_cmd = ["bc-ferries-book"]
+
+        log(f"Starting booking: {' '.join(book_cmd)}")
+        log("Using environment variables for booking configuration")
+
+        # Run booking
+        result = subprocess.run(book_cmd, capture_output=True, text=True)
+
+        log(f"Booking completed with code {result.returncode}")
+        log(f"Output: {result.stdout}")
+        if result.stderr:
+            log(f"Errors: {result.stderr}")
+
+        # Parse booking result
+        try:
+            booking_result = json.loads(result.stdout)
+            success = booking_result.get("success", False)
+
+            if success:
+                update_status("completed", {
+                    "booking_success": True,
+                    "confirmation": booking_result.get("confirmationNumber")
+                })
+
+                write_result(True, {
+                    "phase": "completed",
+                    "confirmationNumber": booking_result.get("confirmationNumber"),
+                    "booking_details": booking_result
+                })
+
+                log(f"✓ BOOKING SUCCESSFUL! Confirmation: {booking_result.get('confirmationNumber')}")
+                cleanup_and_exit(0)
+            else:
+                update_status("failed", {
+                    "phase": "booking",
+                    "failed_step": booking_result.get("failedStep"),
+                    "error": booking_result.get("error")
+                })
+
+                write_result(False, {
+                    "phase": "booking",
+                    "failed_step": booking_result.get("failedStep"),
+                    "error": booking_result.get("error"),
+                    "booking_details": booking_result
+                })
+
+                log(f"✗ Booking failed at step: {booking_result.get('failedStep')}")
+                log(f"Error: {booking_result.get('error')}")
+                cleanup_and_exit(1)
+
+        except json.JSONDecodeError:
+            # Non-JSON output from booking tool
+            log(f"Booking output (non-JSON): {result.stdout}")
+
+            update_status("failed", {
+                "phase": "booking",
+                "error": "Failed to parse booking result"
+            })
+
+            write_result(False, {
+                "phase": "booking",
+                "error": "Failed to parse booking result",
+                "output": result.stdout,
+                "exit_code": result.returncode
+            })
+
+            cleanup_and_exit(1)
+
+    except Exception as e:
+        log(f"Unexpected error: {str(e)}")
+        import traceback
+        log(traceback.format_exc())
+
+        update_status("failed", {
+            "error": str(e)
+        })
+
+        write_result(False, {
+            "error": str(e)
+        })
+
+        cleanup_and_exit(1)
+
+def cleanup_and_exit(code):
+    """Clean up PID file and exit"""
+    if os.path.exists(PID_FILE):
+        os.remove(PID_FILE)
+    log(f"Daemon exiting with code {code}")
+    sys.exit(code)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="BC Ferries Watch and Book - Background daemon for monitoring + auto-booking",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Start daemon to monitor and auto-book when available
+  bc-ferries-watch-and-book start \\
+    --from "Departure Bay" \\
+    --to "Horseshoe Bay" \\
+    --date "01/24/2026" \\
+    --time "1:10 pm" \\
+    --adults 2 \\
+    --vehicle \\
+    --daemon
+
+  # Check daemon status
+  bc-ferries-watch-and-book status
+
+  # View logs
+  bc-ferries-watch-and-book logs
+
+  # Stop daemon
+  bc-ferries-watch-and-book stop
+
+Note: Booking configuration must be set via environment variables:
+  BC_FERRIES_EMAIL, BC_FERRIES_PASSWORD
+  CC_NAME, CC_NUMBER, CC_EXPIRY, CC_CVV
+  CC_ADDRESS, CC_CITY, CC_PROVINCE, CC_POSTAL
+  VEHICLE_HEIGHT, VEHICLE_LENGTH
+  DRY_RUN (true/false)
+"""
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+
+    # Start command
+    start_parser = subparsers.add_parser('start', help='Start monitoring daemon')
+    start_parser.add_argument('--from', dest='from_terminal', required=True,
+                             help='Departure terminal')
+    start_parser.add_argument('--to', dest='to_terminal', required=True,
+                             help='Arrival terminal')
+    start_parser.add_argument('--date', required=True,
+                             help='Date in MM/DD/YYYY format')
+    start_parser.add_argument('--time', required=True,
+                             help='Sailing time (e.g., "1:20 pm")')
+    start_parser.add_argument('--adults', type=int, default=1,
+                             help='Number of adults (default: 1)')
+    start_parser.add_argument('--children', type=int, default=0,
+                             help='Number of children (default: 0)')
+    start_parser.add_argument('--seniors', type=int, default=0,
+                             help='Number of seniors (default: 0)')
+    start_parser.add_argument('--infants', type=int, default=0,
+                             help='Number of infants (default: 0)')
+    start_parser.add_argument('--vehicle', action='store_true', default=True,
+                             help='Travelling with vehicle (default: true)')
+    start_parser.add_argument('--no-vehicle', action='store_false', dest='vehicle',
+                             help='Walk-on passenger (no vehicle)')
+    start_parser.add_argument('--poll-interval', type=int, default=10,
+                             help='Seconds between availability checks (default: 10)')
+    start_parser.add_argument('--timeout', type=int, default=3600,
+                             help='Maximum monitoring time in seconds (default: 3600)')
+    start_parser.add_argument('--daemon', action='store_true', default=True,
+                             help='Run as background daemon (default: true)')
+    start_parser.add_argument('--no-daemon', action='store_false', dest='daemon',
+                             help='Run in foreground (for debugging)')
+
+    # Status command
+    subparsers.add_parser('status', help='Check daemon status')
+
+    # Stop command
+    subparsers.add_parser('stop', help='Stop running daemon')
+
+    # Logs command
+    subparsers.add_parser('logs', help='Show daemon logs')
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        return 1
+
+    if args.command == 'start':
+        if is_running():
+            print("Error: Daemon is already running")
+            print("Use 'bc-ferries-watch-and-book stop' to stop it first")
+            return 1
+
+        # Clear old status/result files
+        for f in [STATUS_FILE, RESULT_FILE]:
+            if os.path.exists(f):
+                os.remove(f)
+
+        if args.daemon:
+            print("Starting daemon in background...")
+            print(f"Monitor with: bc-ferries-watch-and-book status")
+            print(f"View logs: bc-ferries-watch-and-book logs")
+            print(f"Stop daemon: bc-ferries-watch-and-book stop")
+
+        run_daemon(args)
+        return 0
+
+    elif args.command == 'status':
+        return show_status()
+
+    elif args.command == 'stop':
+        return stop_daemon()
+
+    elif args.command == 'logs':
+        return show_logs()
+
+if __name__ == '__main__':
+    sys.exit(main())
