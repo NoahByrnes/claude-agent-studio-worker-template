@@ -10,6 +10,7 @@ Used by regular workers for general task execution.
 **Includes:**
 - Node.js 20
 - Claude Code CLI
+- Destructive Command Guard (dcg) - Safety protection against destructive bash commands
 - Playwright with Chromium browser (for browser automation)
 - Persistent storage helpers (S3, HTTP, local)
 - AWS CLI (for S3 operations)
@@ -68,6 +69,36 @@ async function scrapeWebsite() {
 - ~25x more cost-effective than computer use API ($0.01 vs $0.25 per task)
 - Faster execution (no screenshot processing overhead)
 - Full browser automation capabilities (form filling, clicking, navigation)
+
+### Safety Features - Destructive Command Guard
+
+Workers are protected by `destructive_command_guard` (dcg), a high-performance security hook that intercepts and blocks destructive commands before execution, preventing accidental data loss from AI agent actions.
+
+**What it blocks:**
+- `git reset --hard` / `git reset --merge` - Discards uncommitted work
+- `git checkout -- <file>` - Discards file modifications
+- `git clean -f` - Deletes untracked files
+- `git push --force` - Rewrites remote history
+- `git stash drop` / `git stash clear` - Permanently deletes stashed work
+- `rm -rf` outside temp directories - Recursive deletion of important files
+
+**What it allows:**
+- Safe git operations: `git status`, `git log`, `git add`, `git commit`, `git push`, `git pull`
+- Safe branch deletion: `git branch -d` (requires merge check)
+- Temp directory cleanup: `rm -rf /tmp/*` or `rm -rf $TMPDIR/*`
+- Standard stash operations: `git stash`, `git stash pop`
+
+**Key features:**
+- Sub-millisecond latency (SIMD-accelerated pattern matching)
+- Zero configuration required - Works out of the box
+- Smart context detection - Won't block `grep "rm -rf"` but will block `rm -rf /`
+- AST-based scanning for heredocs and inline scripts (Python, JavaScript, Bash, etc.)
+- Fail-open design - Never blocks workflow due to timeouts
+
+**Configuration:**
+Additional protection packs can be enabled in `~/.config/dcg/config.toml` for databases (PostgreSQL, MySQL), cloud providers (AWS, Azure, GCP), containers (Docker), Kubernetes, and more.
+
+**Learn more:** [Destructive Command Guard on GitHub](https://github.com/Dicklesworthstone/destructive_command_guard)
 
 ### BC Ferries Tools
 

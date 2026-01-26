@@ -25,6 +25,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install Claude Code CLI globally (v1.1.0+)
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install destructive_command_guard for bash command safety
+# Protects against destructive git and filesystem commands (rm -rf, git reset --hard, etc.)
+RUN curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/destructive_command_guard/master/install.sh?$(date +%s)" | bash -s -- --easy-mode
+
 # Install Playwright system dependencies for Chromium
 RUN npx playwright@1.40.0 install-deps chromium
 
