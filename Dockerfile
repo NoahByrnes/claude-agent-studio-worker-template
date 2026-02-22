@@ -38,6 +38,9 @@ RUN npx playwright@1.40.0 install chromium
 RUN pip3 install --no-cache-dir playwright==1.40.0 python-dateutil==2.8.2 requests==2.31.0
 RUN python3 -m playwright install chromium
 
+# Install SendGrid for email capabilities
+RUN pip3 install --no-cache-dir sendgrid==6.11.0
+
 # Install AWS CLI for S3 storage support
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" \
     && unzip -q /tmp/awscliv2.zip -d /tmp \

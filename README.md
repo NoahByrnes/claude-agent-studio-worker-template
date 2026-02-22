@@ -34,6 +34,7 @@ Used by regular workers for general task execution.
 - Claude Code CLI
 - Destructive Command Guard (dcg) - Safety protection against destructive bash commands
 - Playwright with Chromium browser (for browser automation)
+- SendGrid Python SDK (for email capabilities)
 - Persistent storage helpers (S3, HTTP, local)
 - AWS CLI (for S3 operations)
 - Python 3 with BC Ferries polling tool
@@ -46,6 +47,7 @@ Used by infrastructure workers that can modify this repository.
 - GitHub CLI (gh) - Create PRs, manage issues
 - E2B CLI - Rebuild templates
 - Docker CLI - Analyze and modify Dockerfiles
+- SendGrid Python SDK (for email capabilities)
 - Persistent storage helpers (S3, HTTP, local)
 - AWS CLI (for S3 operations)
 - Git configuration for commits
@@ -343,6 +345,88 @@ async function scrapeWebsite() {
 - ~25x more cost-effective than computer use API ($0.01 vs $0.25 per task)
 - Faster execution (no screenshot processing overhead)
 - Full browser automation capabilities (form filling, clicking, navigation)
+
+### Email Capabilities with SendGrid
+
+Workers have SendGrid Python SDK installed for sending emails programmatically. This enables workers to send notifications, reports, and alerts via email.
+
+**Basic usage:**
+```python
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+import os
+
+# Create email message
+message = Mail(
+    from_email='worker@example.com',
+    to_emails='recipient@example.com',
+    subject='Task Completed',
+    html_content='<strong>Your task has been completed successfully.</strong>'
+)
+
+# Send email
+sg = SendGridAPIClient(os.environ['SENDGRID_API_KEY'])
+response = sg.send(message)
+
+print(f"Status: {response.status_code}")
+```
+
+**Advanced features:**
+```python
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+import os
+import base64
+
+# Email with attachment
+message = Mail(
+    from_email='worker@example.com',
+    to_emails='recipient@example.com',
+    subject='Report Generated'
+)
+
+# Add attachment
+with open('report.pdf', 'rb') as f:
+    data = f.read()
+    encoded = base64.b64encode(data).decode()
+
+attachment = Attachment(
+    FileContent(encoded),
+    FileName('report.pdf'),
+    FileType('application/pdf'),
+    Disposition('attachment')
+)
+message.add_attachment(attachment)
+
+# Send
+sg = SendGridAPIClient(os.environ['SENDGRID_API_KEY'])
+response = sg.send(message)
+```
+
+**Multiple recipients:**
+```python
+message = Mail(
+    from_email='worker@example.com',
+    to_emails=['user1@example.com', 'user2@example.com', 'user3@example.com'],
+    subject='Status Update',
+    html_content='<p>Your scheduled update is here.</p>'
+)
+```
+
+**Environment variables:**
+```bash
+# Required for SendGrid
+export SENDGRID_API_KEY="your_sendgrid_api_key"
+```
+
+**Use cases:**
+- Send task completion notifications
+- Email reports and results to users
+- Send error alerts and debugging information
+- Deliver generated documents (PDFs, CSVs, etc.)
+- Schedule periodic status updates
+
+**Note:** For conductor-specific email features (including cron-scheduled status updates), see the Conductor Template section above.
 
 ### Safety Features - Destructive Command Guard
 
