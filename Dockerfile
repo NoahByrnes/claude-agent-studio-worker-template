@@ -70,6 +70,16 @@ RUN PYTHON_SITE=$(python3 -c "import site; print(site.getsitepackages()[0])") &&
     cp /tmp/bc_ferries_booking_modular.py ${PYTHON_SITE}/ && \
     rm /tmp/bc_ferries_booking_modular.py
 
+# Copy watchdog system for worker monitoring
+COPY watchdog.sh /usr/local/bin/watchdog.sh
+COPY watchdog-alert.sh /usr/local/bin/watchdog-alert.sh
+COPY watchdog-setup.sh /usr/local/bin/watchdog-setup.sh
+COPY heartbeat.sh /usr/local/bin/heartbeat.sh
+RUN chmod +x /usr/local/bin/watchdog.sh /usr/local/bin/watchdog-alert.sh /usr/local/bin/watchdog-setup.sh /usr/local/bin/heartbeat.sh
+
+# Create watchdog directories
+RUN mkdir -p /tmp/watchdog /var/log/watchdog
+
 # Verify installations
 RUN node --version && npm --version && claude --version
 

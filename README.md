@@ -642,6 +642,46 @@ test-playwright
 
 This will test browser launch, navigation, and screenshot capabilities.
 
+## Worker Watchdog System
+
+Workers can use the watchdog system to detect stuck, crashed, or unresponsive tasks using heartbeat monitoring and dead man's switch pattern.
+
+**Quick start:**
+```bash
+# In your worker script - send heartbeats periodically
+while processing; do
+    heartbeat.sh "Processing batch $batch_num"
+    process_data
+    sleep 10
+done
+
+# Start watchdog daemon to monitor heartbeats
+watchdog-setup.sh install
+watchdog-setup.sh start
+```
+
+**Features:**
+- Heartbeat monitoring with configurable timeout (default: 90s)
+- Dead man's switch - missing heartbeat triggers alert
+- Multi-tier alerting via SMS/Email (Twilio/SendGrid)
+- Health metrics tracking (memory, CPU, uptime)
+- Auto-restart for dead workers (optional)
+- Continuous daemon or cron-based checks
+
+**Alert configuration:**
+```bash
+export STATUS_UPDATE_RECIPIENTS="stu@example.com,+1234567890"
+export WATCHDOG_ALERT_METHOD="email"  # or "sms" or "both"
+export WATCHDOG_TIMEOUT=90  # seconds before alert
+```
+
+**Status monitoring:**
+```bash
+watchdog-setup.sh status
+```
+
+See [WATCHDOG.md](./WATCHDOG.md) for complete documentation, use cases, and best practices.
+
 ## Persistent Storage
 
 Workers run in ephemeral environments, but work doesn't have to be lost. The persistent storage system provides automatic multi-tier backup:

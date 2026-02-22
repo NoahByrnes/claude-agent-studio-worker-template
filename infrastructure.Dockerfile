@@ -80,6 +80,16 @@ RUN chmod +x /usr/local/bin/persist-result /usr/local/bin/persist-result.js
 COPY init-docker-access.sh /usr/local/bin/init-docker-access
 RUN chmod +x /usr/local/bin/init-docker-access
 
+# Copy watchdog system for worker monitoring
+COPY watchdog.sh /usr/local/bin/watchdog.sh
+COPY watchdog-alert.sh /usr/local/bin/watchdog-alert.sh
+COPY watchdog-setup.sh /usr/local/bin/watchdog-setup.sh
+COPY heartbeat.sh /usr/local/bin/heartbeat.sh
+RUN chmod +x /usr/local/bin/watchdog.sh /usr/local/bin/watchdog-alert.sh /usr/local/bin/watchdog-setup.sh /usr/local/bin/heartbeat.sh
+
+# Create watchdog directories
+RUN mkdir -p /tmp/watchdog /var/log/watchdog
+
 # Verify installations
 RUN node --version && npm --version && claude --version && gh --version && e2b --version
 
