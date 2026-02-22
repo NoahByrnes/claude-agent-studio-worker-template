@@ -16,7 +16,12 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     python3 \
     python3-pip \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+# Set default timezone (can be overridden with TZ environment variable)
+ENV TZ=UTC
+RUN ln -sf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
@@ -25,6 +30,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 
 # Install Claude Code CLI globally (v1.1.0+)
 RUN npm install -g @anthropic-ai/claude-code
+
+# Install Node.js packages for timestamp and messaging utilities
+RUN npm install -g \
+    dayjs \
+    moment-timezone \
+    @twilio/cli
 
 # Create user directories (E2B runs as 'user', not 'root')
 RUN useradd -m -s /bin/bash user || true
@@ -45,6 +56,14 @@ RUN mkdir -p /home/user/.claude/plugins && \
 
 # Create data directory
 RUN mkdir -p /home/user/.claude-mem
+
+# Install Python packages for SMS/email handling with timestamp support
+RUN pip3 install --no-cache-dir \
+    twilio \
+    sendgrid \
+    python-dateutil \
+    pytz \
+    email-validator
 
 # Switch back to root for final setup
 USER root

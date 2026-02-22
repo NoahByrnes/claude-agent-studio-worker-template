@@ -4,6 +4,24 @@ E2B template for Claude Agent Studio workers. This repository contains the conta
 
 ## Templates
 
+### Conductor Template (`conductor.Dockerfile`)
+Used by Stu for orchestration and coordination.
+
+**Includes:**
+- Node.js 20
+- Claude Code CLI
+- claude-mem plugin for persistent memory
+- Bun runtime
+- SMS/Email handling capabilities:
+  - Twilio CLI and Python SDK (for SMS/phone)
+  - SendGrid Python SDK (for email)
+  - Email validation utilities
+- Timestamp and timezone support:
+  - tzdata with configurable TZ environment variable (default: UTC)
+  - Day.js and Moment.js with timezone support (Node.js)
+  - python-dateutil and pytz (Python)
+- Basic utilities (curl, wget, git, jq)
+
 ### Standard Worker Template (`Dockerfile`)
 Used by regular workers for general task execution.
 
@@ -30,6 +48,11 @@ Used by infrastructure workers that can modify this repository.
 
 ## Building Templates
 
+### Conductor Template
+```bash
+e2b template build -f conductor.Dockerfile --name claude-agent-studio-conductor
+```
+
 ### Standard Worker Template
 ```bash
 e2b template build
@@ -44,8 +67,150 @@ e2b template build -f infrastructure.Dockerfile --name claude-agent-studio-worke
 
 Workers are automatically spawned by Stu (the conductor) using these templates. Template IDs are configured via environment variables:
 
+- `E2B_CONDUCTOR_TEMPLATE_ID` - Conductor template (Stu's environment)
 - `E2B_TEMPLATE_ID` - Standard worker template
 - `E2B_INFRASTRUCTURE_TEMPLATE_ID` - Infrastructure worker template
+
+### Conductor SMS/Email Capabilities
+
+The conductor template includes comprehensive SMS and email handling with full timestamp support.
+
+#### Timestamp Handling
+
+**Timezone Configuration:**
+```bash
+# Set timezone via environment variable (defaults to UTC)
+export TZ="America/Los_Angeles"
+export TZ="America/New_York"
+export TZ="Europe/London"
+```
+
+**Python timestamp utilities:**
+```python
+from datetime import datetime
+import pytz
+from dateutil import parser
+
+# Parse message timestamp with timezone awareness
+timestamp = parser.parse("2026-02-22T10:30:00-08:00")
+
+# Convert to different timezone
+ny_tz = pytz.timezone('America/New_York')
+ny_time = timestamp.astimezone(ny_tz)
+
+# Format for display
+print(timestamp.strftime("%Y-%m-%d %I:%M %p %Z"))
+```
+
+**Node.js timestamp utilities:**
+```javascript
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Parse and convert message timestamp
+const timestamp = dayjs.tz("2026-02-22 10:30", "America/Los_Angeles");
+const nyTime = timestamp.tz("America/New_York");
+
+console.log(nyTime.format("YYYY-MM-DD hh:mm A z"));
+```
+
+#### SMS via Twilio
+
+**Python SDK:**
+```python
+from twilio.rest import Client
+import os
+
+client = Client(
+    os.environ['TWILIO_ACCOUNT_SID'],
+    os.environ['TWILIO_AUTH_TOKEN']
+)
+
+# Send SMS with timestamp tracking
+message = client.messages.create(
+    body="Your message here",
+    from_=os.environ['TWILIO_PHONE_NUMBER'],
+    to="+1234567890"
+)
+
+print(f"Message SID: {message.sid}")
+print(f"Sent at: {message.date_sent}")
+print(f"Status: {message.status}")
+```
+
+**Twilio CLI:**
+```bash
+# Configure credentials
+export TWILIO_ACCOUNT_SID="your_account_sid"
+export TWILIO_AUTH_TOKEN="your_auth_token"
+
+# Send SMS
+twilio api:core:messages:create \
+  --from "+1234567890" \
+  --to "+0987654321" \
+  --body "Your message"
+
+# List recent messages with timestamps
+twilio api:core:messages:list --limit 10
+```
+
+#### Email via SendGrid
+
+**Python SDK:**
+```python
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+import os
+from datetime import datetime
+
+# Create timestamped email
+message = Mail(
+    from_email='from@example.com',
+    to_emails='to@example.com',
+    subject=f'Message at {datetime.now().isoformat()}',
+    html_content='<strong>Your email content</strong>'
+)
+
+# Send with timestamp in custom headers
+message.add_header('X-Sent-Timestamp', datetime.now().isoformat())
+
+sg = SendGridAPIClient(os.environ['SENDGRID_API_KEY'])
+response = sg.send(message)
+
+print(f"Status: {response.status_code}")
+print(f"Headers: {response.headers}")
+```
+
+#### Email Validation
+
+```python
+from email_validator import validate_email, EmailNotValidError
+
+try:
+    valid = validate_email("user@example.com")
+    email = valid.email  # Normalized form
+    print(f"Valid email: {email}")
+except EmailNotValidError as e:
+    print(f"Invalid email: {e}")
+```
+
+**Environment Variables for SMS/Email:**
+```bash
+# Twilio (SMS)
+export TWILIO_ACCOUNT_SID="your_account_sid"
+export TWILIO_AUTH_TOKEN="your_auth_token"
+export TWILIO_PHONE_NUMBER="+1234567890"
+
+# SendGrid (Email)
+export SENDGRID_API_KEY="your_api_key"
+
+# Timezone (optional, defaults to UTC)
+export TZ="America/Los_Angeles"
+```
 
 ### Browser Automation with Playwright
 
