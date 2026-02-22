@@ -79,6 +79,16 @@ COPY status-update.sh /usr/local/bin/status-update.sh
 COPY setup-cron.sh /usr/local/bin/setup-cron.sh
 RUN chmod +x /usr/local/bin/status-update.sh /usr/local/bin/setup-cron.sh
 
+# Copy watchdog system for worker monitoring
+COPY watchdog.sh /usr/local/bin/watchdog.sh
+COPY watchdog-alert.sh /usr/local/bin/watchdog-alert.sh
+COPY watchdog-setup.sh /usr/local/bin/watchdog-setup.sh
+COPY heartbeat.sh /usr/local/bin/heartbeat.sh
+RUN chmod +x /usr/local/bin/watchdog.sh /usr/local/bin/watchdog-alert.sh /usr/local/bin/watchdog-setup.sh /usr/local/bin/heartbeat.sh
+
+# Create watchdog directories
+RUN mkdir -p /tmp/watchdog /var/log/watchdog && chown user:user /var/log/watchdog
+
 # Switch to user for runtime
 USER user
 
