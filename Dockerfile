@@ -77,6 +77,13 @@ COPY watchdog-setup.sh /usr/local/bin/watchdog-setup.sh
 COPY heartbeat.sh /usr/local/bin/heartbeat.sh
 RUN chmod +x /usr/local/bin/watchdog.sh /usr/local/bin/watchdog-alert.sh /usr/local/bin/watchdog-setup.sh /usr/local/bin/heartbeat.sh
 
+# Copy real-time monitoring system
+COPY monitoring-server.js /usr/local/bin/monitoring-server.js
+COPY worker-event.sh /usr/local/bin/worker-event.sh
+COPY worker-registry.sh /usr/local/bin/worker-registry.sh
+COPY monitoring-cli.sh /usr/local/bin/monitoring-cli.sh
+RUN chmod +x /usr/local/bin/monitoring-server.js /usr/local/bin/worker-event.sh /usr/local/bin/worker-registry.sh /usr/local/bin/monitoring-cli.sh
+
 # Create watchdog directories
 RUN mkdir -p /tmp/watchdog /var/log/watchdog
 

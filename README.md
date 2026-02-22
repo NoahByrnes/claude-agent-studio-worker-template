@@ -682,6 +682,84 @@ watchdog-setup.sh status
 
 See [WATCHDOG.md](./WATCHDOG.md) for complete documentation, use cases, and best practices.
 
+## Real-Time Monitoring and Oversight
+
+Comprehensive monitoring system for real-time visibility into worker health, performance, and events.
+
+**Features:**
+- **HTTP Monitoring API** - REST endpoints for worker status, metrics, and events
+- **Server-Sent Events (SSE)** - Live streaming of health updates
+- **Worker Registry** - Centralized discovery and tracking of all workers
+- **Structured Event Logging** - JSON-based event log with timestamps
+- **Prometheus Metrics** - Compatible with Prometheus/Grafana
+- **CLI Tools** - Command-line interface for querying and monitoring
+
+**Quick start:**
+```bash
+# Start monitoring server (conductor/Stu)
+monitoring-server.js &
+
+# Workers register themselves
+worker-registry.sh register --task "ferry-booking" --tags "production,ferry"
+
+# Workers log events
+worker-event.sh "task_started" "Processing booking" '{"booking_id":"123"}'
+worker-event.sh "task_completed" "Booking successful" '{"confirmation":"BC12345"}'
+
+# Query status via CLI
+monitoring-cli.sh health        # System health
+monitoring-cli.sh workers       # List all workers
+monitoring-cli.sh events 50     # Recent events
+monitoring-cli.sh watch         # Live monitoring
+
+# Query via HTTP API
+curl http://localhost:9090/health
+curl http://localhost:9090/workers
+curl http://localhost:9090/events?limit=100
+curl http://localhost:9090/metrics  # Prometheus format
+```
+
+**API Endpoints:**
+- `GET /health` - System health summary
+- `GET /workers` - List all workers with status
+- `GET /workers/:id` - Detailed worker metrics
+- `GET /metrics` - Prometheus-compatible metrics
+- `GET /events?limit=N` - Recent events
+- `GET /stream` - Server-Sent Events (SSE) stream
+- `GET /registry` - Worker registry
+
+**Integration with existing systems:**
+```bash
+# Use with watchdog for comprehensive monitoring
+monitoring-server.js &          # Real-time visibility
+watchdog-setup.sh start         # Failure alerts
+
+# Worker example with full monitoring
+export WORKER_ID="worker-ferry-$(date +%s)"
+
+worker-registry.sh register --task "ferry-booking"
+worker-event.sh "task_started" "Started booking"
+
+while processing; do
+    heartbeat.sh "Processing"        # Existing heartbeat
+    worker-event.sh "info" "Status"  # Optional event logging
+    sleep 30
+done
+
+worker-event.sh "task_completed" "Done"
+worker-registry.sh unregister
+```
+
+**Benefits:**
+- Real-time visibility into all workers
+- Centralized event logging for debugging
+- Prometheus/Grafana integration for dashboards
+- Live streaming via SSE for dynamic UIs
+- Worker discovery and tracking
+- Performance metrics (memory, uptime, CPU)
+
+See [MONITORING.md](./MONITORING.md) for complete documentation, API reference, and integration examples.
+
 ## Persistent Storage
 
 Workers run in ephemeral environments, but work doesn't have to be lost. The persistent storage system provides automatic multi-tier backup:
