@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     gnupg \
     sudo \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20
@@ -63,6 +65,9 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/aws
 
 # Install Node.js dependencies for storage helpers
 RUN npm install -g node-fetch@2 form-data
+
+# Install SendGrid for email capabilities
+RUN pip3 install --no-cache-dir sendgrid==6.11.0
 
 # Git configuration for commits
 RUN git config --global user.name "Claude Agent Studio Bot" && \
