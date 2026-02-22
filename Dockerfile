@@ -25,6 +25,15 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install Claude Code CLI globally (v1.1.0+)
 RUN npm install -g @anthropic-ai/claude-code
 
+# Set default token budget for cost protection (can be overridden with WORKER_MAX_BUDGET_USD env var)
+ENV WORKER_MAX_BUDGET_USD=5.00
+
+# Install token budget wrapper for Claude CLI
+COPY claude-with-budget.sh /usr/local/bin/claude-with-budget
+RUN chmod +x /usr/local/bin/claude-with-budget && \
+    mv /usr/bin/claude /usr/bin/claude-real && \
+    ln -s /usr/local/bin/claude-with-budget /usr/bin/claude
+
 # Install destructive_command_guard for bash command safety
 # Protects against destructive git and filesystem commands (rm -rf, git reset --hard, etc.)
 RUN mkdir -p /root/.local/bin && \

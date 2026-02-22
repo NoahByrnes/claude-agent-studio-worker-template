@@ -26,6 +26,15 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install Claude Code CLI globally (v1.1.0+)
 RUN npm install -g @anthropic-ai/claude-code
 
+# Set default token budget for infrastructure workers
+ENV INFRASTRUCTURE_MAX_BUDGET_USD=10.00
+
+# Install token budget wrapper for Claude CLI
+COPY claude-with-budget.sh /usr/local/bin/claude-with-budget
+RUN chmod +x /usr/local/bin/claude-with-budget && \
+    mv /usr/bin/claude /usr/bin/claude-real && \
+    ln -s /usr/local/bin/claude-with-budget /usr/bin/claude
+
 # Install Playwright system dependencies (for browser automation)
 RUN npx playwright install-deps chromium || true
 
