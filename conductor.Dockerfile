@@ -32,11 +32,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install Claude Code CLI globally (v1.1.0+)
 RUN npm install -g @anthropic-ai/claude-code
 
-# Install Node.js packages for timestamp and messaging utilities
+# Install Node.js packages for timestamp utilities
 RUN npm install -g \
     dayjs \
-    moment-timezone \
-    @twilio/cli
+    moment-timezone
 
 # Create user directories (E2B runs as 'user', not 'root')
 RUN useradd -m -s /bin/bash user || true
