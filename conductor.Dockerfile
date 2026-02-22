@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     tzdata \
+    cron \
     && rm -rf /var/lib/apt/lists/*
 
 # Set default timezone (can be overridden with TZ environment variable)
@@ -70,6 +71,14 @@ USER root
 
 # Create workspace
 RUN mkdir -p /workspace && chown user:user /workspace
+
+# Create cron log directory
+RUN mkdir -p /var/log/conductor-cron && chown user:user /var/log/conductor-cron
+
+# Copy cron scripts
+COPY status-update.sh /usr/local/bin/status-update.sh
+COPY setup-cron.sh /usr/local/bin/setup-cron.sh
+RUN chmod +x /usr/local/bin/status-update.sh /usr/local/bin/setup-cron.sh
 
 # Switch to user for runtime
 USER user

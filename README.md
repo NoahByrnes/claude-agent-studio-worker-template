@@ -20,7 +20,11 @@ Used by Stu for orchestration and coordination.
   - tzdata with configurable TZ environment variable (default: UTC)
   - Day.js and Moment.js with timezone support (Node.js)
   - python-dateutil and pytz (Python)
-- Basic utilities (curl, wget, git, jq)
+- Cron system for proactive status updates:
+  - Scheduled status updates via SMS/email
+  - Configurable intervals and recipients
+  - Automatic log rotation
+- Basic utilities (curl, wget, git, jq, cron)
 
 ### Standard Worker Template (`Dockerfile`)
 Used by regular workers for general task execution.
@@ -210,6 +214,111 @@ export SENDGRID_API_KEY="your_api_key"
 
 # Timezone (optional, defaults to UTC)
 export TZ="America/Los_Angeles"
+```
+
+### Proactive Status Updates with Cron
+
+The conductor template includes a cron-based system for sending proactive status updates via SMS or email at scheduled intervals.
+
+#### Setup
+
+**Enable status updates:**
+```bash
+# Configure recipients (comma-separated phone numbers or emails)
+export STATUS_UPDATE_RECIPIENTS="user@example.com,+1234567890"
+
+# Choose method: "sms" or "email" (default: email)
+export STATUS_UPDATE_METHOD="email"
+
+# Enable cron updates
+export STATUS_UPDATE_ENABLED="true"
+
+# Optional: Custom schedule (default: every 6 hours)
+export STATUS_UPDATE_SCHEDULE="0 */6 * * *"
+
+# Run setup script
+/usr/local/bin/setup-cron.sh
+```
+
+#### Cron Schedule Examples
+
+```bash
+# Every hour
+setup-cron.sh "0 * * * *"
+
+# Every 30 minutes
+setup-cron.sh "*/30 * * * *"
+
+# Twice daily (9am and 9pm)
+setup-cron.sh "0 9,21 * * *"
+
+# Daily at 3am
+setup-cron.sh "0 3 * * *"
+
+# Every 6 hours (default)
+setup-cron.sh "0 */6 * * *"
+
+# Disable updates
+setup-cron.sh disable
+```
+
+#### Status Update Content
+
+Each status update includes:
+- Timestamp with timezone
+- System uptime
+- Memory usage (used/total)
+- Disk usage (used/total/percentage)
+- Operational status
+
+**Example status message:**
+```
+Conductor Status Update
+Time: 2026-02-22 15:30:00 UTC
+Uptime: 3 days, 12:45
+Memory: Used: 384Mi / Total: 1024Mi
+Disk: Used: 2.1G / Total: 10G (21% used)
+
+Status: Operational
+```
+
+#### Manual Status Updates
+
+Send a status update manually at any time:
+```bash
+/usr/local/bin/status-update.sh
+```
+
+#### Logs
+
+Cron job logs are stored in `/var/log/conductor-cron/`:
+- `status-update.log` - Status update execution log
+- `setup.log` - Cron setup log
+
+View recent logs:
+```bash
+tail -f /var/log/conductor-cron/status-update.log
+```
+
+#### Environment Variables Summary
+
+```bash
+# Required for any status updates
+STATUS_UPDATE_RECIPIENTS="email1@example.com,email2@example.com"
+
+# Optional configuration
+STATUS_UPDATE_METHOD="email"           # "email" or "sms"
+STATUS_UPDATE_ENABLED="true"           # Must be "true" to enable
+STATUS_UPDATE_SCHEDULE="0 */6 * * *"   # Cron schedule expression
+STATUS_UPDATE_FROM_EMAIL="stu@conductor.local"  # From address for emails
+
+# Required for SMS (via Twilio)
+TWILIO_ACCOUNT_SID="your_account_sid"
+TWILIO_AUTH_TOKEN="your_auth_token"
+TWILIO_PHONE_NUMBER="+1234567890"
+
+# Required for Email (via SendGrid)
+SENDGRID_API_KEY="your_api_key"
 ```
 
 ### Browser Automation with Playwright
