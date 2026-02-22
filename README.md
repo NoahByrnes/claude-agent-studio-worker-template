@@ -9,7 +9,7 @@ Used by Stu for orchestration and coordination.
 
 **Includes:**
 - Node.js 20
-- Claude Code CLI
+- Claude Code CLI with token budget limits ($20 default)
 - claude-mem plugin for persistent memory
 - Bun runtime
 - SMS/Email handling capabilities:
@@ -31,7 +31,7 @@ Used by regular workers for general task execution.
 
 **Includes:**
 - Node.js 20
-- Claude Code CLI
+- Claude Code CLI with token budget limits ($5 default)
 - Destructive Command Guard (dcg) - Safety protection against destructive bash commands
 - Playwright with Chromium browser (for browser automation)
 - Persistent storage helpers (S3, HTTP, local)
@@ -41,6 +41,10 @@ Used by regular workers for general task execution.
 
 ### Infrastructure Worker Template (`infrastructure.Dockerfile`)
 Used by infrastructure workers that can modify this repository.
+
+**Includes:**
+- Node.js 20
+- Claude Code CLI with token budget limits ($10 default)
 
 **Additional capabilities:**
 - GitHub CLI (gh) - Create PRs, manage issues
@@ -74,6 +78,54 @@ Workers are automatically spawned by Stu (the conductor) using these templates. 
 - `E2B_CONDUCTOR_TEMPLATE_ID` - Conductor template (Stu's environment)
 - `E2B_TEMPLATE_ID` - Standard worker template
 - `E2B_INFRASTRUCTURE_TEMPLATE_ID` - Infrastructure worker template
+
+### Token Budget Limits (Cost Protection)
+
+All worker templates include automatic token budget limits to prevent runaway costs. Budget limits apply only to non-interactive `claude --print` mode.
+
+**Default budgets:**
+- **Standard workers**: $5.00 per session
+- **Infrastructure workers**: $10.00 per session
+- **Conductor (Stu)**: $20.00 per session
+
+**Environment variables:**
+```bash
+# Override budget for standard workers
+export WORKER_MAX_BUDGET_USD="10.00"
+
+# Override budget for infrastructure workers
+export INFRASTRUCTURE_MAX_BUDGET_USD="15.00"
+
+# Override budget for conductor
+export CONDUCTOR_MAX_BUDGET_USD="50.00"
+
+# Disable budget limits (not recommended)
+export WORKER_MAX_BUDGET_USD="disabled"
+```
+
+**How it works:**
+- Budget limits automatically apply to `claude --print` commands
+- Interactive sessions (`claude` without `--print`) have no limits (user controls)
+- Workers hit budget limit will stop gracefully with clear error message
+- Users can override budget per-invocation: `claude --print --max-budget-usd 25.00`
+
+**Example usage:**
+```bash
+# Standard worker with default $5 budget
+claude --print "Analyze this codebase"
+
+# Override budget for expensive task
+claude --print --max-budget-usd 15.00 "Deep analysis with multiple tools"
+
+# Interactive session - no budget limit
+claude
+```
+
+**Benefits:**
+- Prevents accidental cost overruns from infinite loops or recursive tasks
+- Provides predictable cost ceiling per worker session
+- Flexible: Environment variables allow per-deployment customization
+- Transparent: Workers get clear error when hitting budget limit
 
 ### Conductor SMS/Email Capabilities
 
